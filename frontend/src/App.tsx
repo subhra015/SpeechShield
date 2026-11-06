@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { API_BASE_URL } from "./config";
 
 type Health = { application: string; model_ready: boolean; model_error: string | null; status: string };
 type ModelInfo = {
@@ -15,8 +16,8 @@ export default function App() {
   const [info, setInfo] = useState<ModelInfo | null>(null);
 
   useEffect(() => {
-    fetch("/api/health").then((r) => r.json()).then(setHealth).catch(() => setHealth(null));
-    fetch("/api/model/info").then((r) => r.json()).then(setInfo).catch(() => setInfo(null));
+    fetch(`${API_BASE_URL}/api/health`).then((r) => r.json()).then(setHealth).catch(() => setHealth(null));
+    fetch(`${API_BASE_URL}/api/model/info`).then((r) => r.json()).then(setInfo).catch(() => setInfo(null));
   }, []);
 
   return (

@@ -12,7 +12,7 @@ import importlib.util
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 import torch
 
@@ -22,17 +22,17 @@ from app.config import settings
 @dataclass
 class ModelHandle:
     ready: bool = False
-    error: Optional[str] = None
+    error: str | None = None
     model: Any = None
-    config: Dict[str, Any] = field(default_factory=dict)
-    preprocessing_config: Dict[str, Any] = field(default_factory=dict)
-    manifest: Dict[str, Any] = field(default_factory=dict)
-    checkpoint_path: Optional[Path] = None
-    checkpoint_sha256: Optional[str] = None
-    expected_sha256: Optional[str] = None
+    config: dict[str, Any] = field(default_factory=dict)
+    preprocessing_config: dict[str, Any] = field(default_factory=dict)
+    manifest: dict[str, Any] = field(default_factory=dict)
+    checkpoint_path: Path | None = None
+    checkpoint_sha256: str | None = None
+    expected_sha256: str | None = None
     inference_status: str = "BLOCKED_PREPROCESSING_PARITY"
     device: str = "cpu"
-    parameter_count: Optional[int] = None
+    parameter_count: int | None = None
 
 
 def _sha256_file(path: Path) -> str:
@@ -43,7 +43,7 @@ def _sha256_file(path: Path) -> str:
     return h.hexdigest()
 
 
-def _load_json(path: Path) -> Dict[str, Any]:
+def _load_json(path: Path) -> dict[str, Any]:
     with path.open("r", encoding="utf-8") as f:
         return json.load(f)
 
@@ -81,7 +81,9 @@ def load_v4_model() -> ModelHandle:
         # Expected SHA from manifest
         expected = None
         files = handle.manifest.get("files", {})
-        entry = files.get("checkpoints/best_v4.pt") or files.get("v4_training/checkpoints/best_v4.pt")
+        entry = files.get("checkpoints/best_v4.pt") or files.get(
+            "v4_training/checkpoints/best_v4.pt"
+        )
         if entry and "sha256" in entry:
             expected = entry["sha256"]
         if handle.manifest.get("checkpoint_sha256"):
@@ -95,9 +97,7 @@ def load_v4_model() -> ModelHandle:
         actual = _sha256_file(ckpt_path)
         handle.checkpoint_sha256 = actual
         if expected and actual.lower() != expected.lower():
-            raise RuntimeError(
-                f"Checkpoint SHA-256 mismatch: expected {expected}, got {actual}"
-            )
+            raise RuntimeError(f"Checkpoint SHA-256 mismatch: expected {expected}, got {actual}")
 
         # Architecture compatibility
         arch = handle.config.get("model_architecture")
@@ -127,10 +127,10 @@ def load_v4_model() -> ModelHandle:
 
 
 # Module-level singleton, populated during app lifespan
-_model_handle: Optional[ModelHandle] = None
+_model_handle: ModelHandle | None = None
 
 
-def get_model_handle() -> Optional[ModelHandle]:
+def get_model_handle() -> ModelHandle | None:
     return _model_handle
 
 

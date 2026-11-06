@@ -2,8 +2,6 @@ import hashlib
 import json
 from pathlib import Path
 
-import pytest
-
 BACKEND = Path(__file__).resolve().parent.parent
 ARTIFACTS = BACKEND / "artifacts" / "v4"
 

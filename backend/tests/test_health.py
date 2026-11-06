@@ -4,6 +4,8 @@ def test_health_application_available(client):
     data = r.json()
     assert data["application"] == "available"
     assert data["model_ready"] is True
+    assert data["checkpoint_loaded"] is True
+    assert data["inference_ready"] is False
     assert data["model_error"] is None
     assert data["status"] == "ok"
 

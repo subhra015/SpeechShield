@@ -11,15 +11,27 @@ from fastapi.responses import JSONResponse
 
 from app.api import api_router
 from app.config import settings
+from app.logging_config import configure_logging
+from app.middleware import CorrelationIdMiddleware
 from app.services.model_loader import load_v4_model, set_model_handle
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    configure_logging(settings.log_level)
+    import logging
+
+    logger = logging.getLogger("speechshield")
+    logger.info("Starting %s (%s)", settings.app_name, settings.environment)
     handle = load_v4_model()
     set_model_handle(handle)
+    if handle.ready:
+        logger.info("V4 model loaded; sha256 verified; inference BLOCKED (preprocessing parity)")
+    else:
+        logger.error("V4 model failed to load: %s", handle.error)
     yield
     set_model_handle(None)
+    logger.info("Shutdown complete")
 
 
 app = FastAPI(
@@ -33,6 +45,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.add_middleware(CorrelationIdMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins,
@@ -47,7 +60,13 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     errors = []
     for err in exc.errors():
         field = " -> ".join(str(loc) for loc in err.get("loc", []))
-        errors.append({"field": field, "message": err.get("msg", "Invalid value"), "type": err.get("type", "value_error")})
+        errors.append(
+            {
+                "field": field,
+                "message": err.get("msg", "Invalid value"),
+                "type": err.get("type", "value_error"),
+            }
+        )
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content={"detail": "Request validation failed", "errors": errors},
@@ -57,7 +76,9 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request: Request, exc: Exception):
     if settings.debug:
-        return JSONResponse(status_code=500, content={"detail": "Internal server error", "error": str(exc)})
+        return JSONResponse(
+            status_code=500, content={"detail": "Internal server error", "error": str(exc)}
+        )
     return JSONResponse(status_code=500, content={"detail": "An internal server error occurred"})
 
 

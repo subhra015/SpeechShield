@@ -5,8 +5,9 @@ Loaded from environment variables via pydantic-settings.
 """
 
 from pathlib import Path
-from typing import List, Optional
-from pydantic import Field
+from typing import Literal
+
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Root of the backend package (speechshield/backend)
@@ -23,7 +24,9 @@ class Settings(BaseSettings):
     # --- API metadata ---
     app_name: str = "SpeechShield API"
     app_version: str = "0.1.0-layer0"
+    environment: Literal["development", "test", "production"] = "development"
     debug: bool = False
+    log_level: str = "INFO"
 
     # --- CORS ---
     frontend_origin: str = "http://localhost:5173,http://127.0.0.1:5173"
@@ -38,7 +41,26 @@ class Settings(BaseSettings):
     device: str = "cpu"
 
     # --- Optional integrity override (leave empty to use manifest) ---
-    expected_checkpoint_sha256: Optional[str] = None
+    expected_checkpoint_sha256: str | None = None
+
+    @field_validator("frontend_origin")
+    @classmethod
+    def _validate_origins(cls, v: str) -> str:
+        origins = [o.strip() for o in v.split(",") if o.strip()]
+        if not origins:
+            raise ValueError("frontend_origin must contain at least one origin")
+        for o in origins:
+            if "*" in o:
+                raise ValueError("Wildcard CORS origins are not allowed")
+        return v
+
+    @field_validator("log_level")
+    @classmethod
+    def _validate_log_level(cls, v: str) -> str:
+        allowed = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
+        if v.upper() not in allowed:
+            raise ValueError(f"log_level must be one of {sorted(allowed)}")
+        return v.upper()
 
     model_config = SettingsConfigDict(
         env_file=str(BACKEND_DIR / ".env"),
@@ -48,7 +70,7 @@ class Settings(BaseSettings):
     )
 
     @property
-    def allowed_origins(self) -> List[str]:
+    def allowed_origins(self) -> list[str]:
         return [o.strip() for o in self.frontend_origin.split(",") if o.strip()]
 
     def resolved_artifact_dir(self) -> Path:
