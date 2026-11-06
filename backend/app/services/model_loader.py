@@ -33,6 +33,8 @@ class ModelHandle:
     inference_status: str = "BLOCKED_PREPROCESSING_PARITY"
     device: str = "cpu"
     parameter_count: int | None = None
+    preprocessing_parity_verified: bool = False
+    inference_ready: bool = False
 
 
 def _sha256_file(path: Path) -> str:

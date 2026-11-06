@@ -16,7 +16,9 @@ class ModelInfoResponse(BaseModel):
     target_length_seconds: float | None
     n_mels: int | None
     inference_status: str
-    # Preprocessing parity is unverified in Layer 0.
+    preprocessing_parity_verified: bool = False
+    inference_ready: bool = False
+    # Preprocessing parity is unverified.
     inference_production_ready: bool = False
     notes: str = (
         "Layer 0: model loaded and integrity-verified. "

@@ -4,6 +4,8 @@ def test_model_info_safe_metadata_only(client):
     data = r.json()
     assert data["inference_production_ready"] is False
     assert data["inference_status"] == "BLOCKED_PREPROCESSING_PARITY"
+    assert data["preprocessing_parity_verified"] is False
+    assert data["inference_ready"] is False
     # safe metadata present
     assert data["model_version"] == "V4"
     assert data["architecture"] == "CompactCNN"

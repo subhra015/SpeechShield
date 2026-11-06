@@ -31,5 +31,7 @@ def model_info() -> ModelInfoResponse:
         target_length_seconds=cfg.get("target_length_seconds"),
         n_mels=cfg.get("n_mels"),
         inference_status=handle.inference_status,
+        preprocessing_parity_verified=handle.preprocessing_parity_verified,
+        inference_ready=handle.inference_ready,
         inference_production_ready=False,
     )
