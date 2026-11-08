@@ -25,6 +25,9 @@ build/
 *.sqlite3
 *.log
 
+# Local validation reports
+/backend/.validation_reports/
+
 # IDE and OS files
 .idea/
 .vscode/

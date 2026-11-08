@@ -37,8 +37,22 @@ class Settings(BaseSettings):
     model_config_filename: str = "v4_config.json"
     artifact_manifest_filename: str = "v4_artifact_manifest.json"
 
-    # --- Inference device (CPU only in Layer 0) ---
+    # --- Model inference device (kept on CPU) ---
     device: str = "cpu"
+
+    # --- Audio preprocessing device (independent of model inference) ---
+    preprocessing_device: Literal["cpu", "cuda"] = "cpu"
+
+    # --- Database (Layer 3) ---
+    database_url: str = "sqlite:///./data/speechshield.db"
+
+    # --- Authentication (Layer 3) ---
+    jwt_secret_key: str = "dev-insecure-change-me-in-production"
+    jwt_algorithm: str = "HS256"
+    access_token_expire_minutes: int = 60
+
+    # --- Rate limiting (Layer 3) ---
+    rate_limit_per_minute: int = 60
 
     # --- Optional integrity override (leave empty to use manifest) ---
     expected_checkpoint_sha256: str | None = None
@@ -61,6 +75,13 @@ class Settings(BaseSettings):
         if v.upper() not in allowed:
             raise ValueError(f"log_level must be one of {sorted(allowed)}")
         return v.upper()
+
+    @field_validator("jwt_secret_key")
+    @classmethod
+    def _validate_jwt_secret(cls, v: str) -> str:
+        if len(v) < 16:
+            raise ValueError("jwt_secret_key must be at least 16 characters")
+        return v
 
     model_config = SettingsConfigDict(
         env_file=str(BACKEND_DIR / ".env"),

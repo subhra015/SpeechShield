@@ -15,13 +15,18 @@ class ModelInfoResponse(BaseModel):
     target_sample_rate: int | None
     target_length_seconds: float | None
     n_mels: int | None
+
+    # Runtime status is calculated dynamically by the model-info router.
     inference_status: str
     preprocessing_parity_verified: bool = False
     inference_ready: bool = False
-    # Preprocessing parity is unverified.
+
+    # Internal inference availability is not production readiness.
     inference_production_ready: bool = False
+
     notes: str = (
-        "Layer 0: model loaded and integrity-verified. "
-        "Inference is BLOCKED pending preprocessing parity verification. "
-        "No prediction endpoint is exposed."
+        "Internal inference readiness is determined by model integrity, "
+        "explicit parity authorization, and validated preprocessing runtime. "
+        "No public prediction endpoint is exposed. "
+        "Production readiness remains disabled."
     )

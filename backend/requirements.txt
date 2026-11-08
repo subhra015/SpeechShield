@@ -4,6 +4,7 @@
 fastapi==0.162.0
 uvicorn[standard]==0.54.0
 pydantic==2.14.3
+email-validator==2.3.0
 pydantic-settings==2.16.2
 python-dotenv==1.2.4
 
@@ -16,6 +17,13 @@ librosa==1.0.0
 numpy==2.5.4
 scipy==1.18.1
 soundfile==0.14.0
+
+# Database
+sqlalchemy==2.1.8
+
+# Authentication
+python-jose[cryptography]==3.5.0
+bcrypt==5.0.0
 
 # HTTP client / testing
 httpx==0.28.1

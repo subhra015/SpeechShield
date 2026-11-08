@@ -1,8 +1,10 @@
-"""Reference parity validation contract (Layer 2).
+"""Runtime authorization contract for V4 preprocessing parity.
 
-Preprocessing parity is currently BLOCKED. This module defines the comparison
-contract that must be satisfied once golden reference fixtures are available.
-No fake or synthetic reference data is produced here.
+The authoritative comparison is performed by
+backend/scripts/validate_v4_parity.py.
+
+Passing that validator does not automatically enable inference. Runtime
+authorization remains an explicit, separately reviewed decision.
 """
 
 from __future__ import annotations
@@ -22,7 +24,7 @@ class ParityResult:
     details: str = ""
 
 
-# Parity is not verified. This flag gates inference.
+# Deliberately disabled until explicit authorization.
 PREPROCESSING_PARITY_VERIFIED: bool = False
 
 
@@ -30,5 +32,12 @@ def parity_status() -> dict[str, Any]:
     return {
         "preprocessing_parity_verified": PREPROCESSING_PARITY_VERIFIED,
         "inference_ready": False,
-        "reason": "Training preprocessing source and golden reference fixtures are not available.",
+        "reason": (
+            "The parity gate is disabled pending explicit authorization."
+            if not PREPROCESSING_PARITY_VERIFIED
+            else (
+                "Parity authorization is enabled. Model loading and validated "
+                "CUDA runtime readiness are checked separately."
+            )
+        ),
     }

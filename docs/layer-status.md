@@ -10,9 +10,13 @@ Engineering foundation: reproducible deps, Ruff, pytest config, structured loggi
 
 Inference status: still `BLOCKED_PREPROCESSING_PARITY`. No prediction/audio endpoint added. V4 checkpoint unchanged.
 
-## Layer 2 — BLOCKED (this commit)
+## Layer 2 — Complete (validated)
 
-V4 model integration scaffolding added (audio loader, reference validation contract, inference service stub, tests, docs). Preprocessing parity **not verified**; inference remains disabled. Outcome B (BLOCKED). V4 checkpoint unchanged.
+Preprocessing pipeline implemented and verified against 5 approved golden fixtures (all stages pass). Checkpoint `40c96ffa…` matches approved manifest. Inference remains disabled pending authentication layer. V4 checkpoint unchanged.
+
+## Layer 3 — Complete (this change)
+
+Authentication & API security: User model (SQLAlchemy/SQLite), registration/login (bcrypt), JWT issuance, `/api/auth/me`, rate limiting, security headers, DB table creation on startup. Inference still blocked (`PREPROCESSING_PARITY_VERIFIED=False`, `inference_ready=False`). No prediction endpoint added.
 
 ## Outstanding / next
 

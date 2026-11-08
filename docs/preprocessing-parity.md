@@ -1,75 +1,71 @@
-# Preprocessing Parity Report (Layer 2)
+# Preprocessing Parity Report (Layer 2 Revision)
 
 ## Result
 
-**BLOCKED_PREPROCESSING_PARITY** — training preprocessing source and golden reference fixtures are unavailable. No guessed pipeline implemented. Inference disabled.
+**BLOCKED** — preprocessing stages match the golden references within justified tolerances, but the **local checkpoint hash does not match the golden-reference manifest checkpoint hash**, and the model logits do not match. Inference remains disabled.
 
-## Evidence audit
+- Local checkpoint SHA-256: `40c96ffa919a8d9d1e188321ee76f215f93e09241ec444eaed9b627234a8acda`
+- Golden manifest checkpoint SHA-256: `6f4f37e46e9fb22fcfd13334f6fb0d929c8170d125628c3d6e968b6f3272719f`
+- Mismatch: YES
 
-| Parameter | Saved value | Training implementation evidence | Verification status |
-|---|---|---|---|
-| Sample rate | 16000 Hz | Config only | Unverified source |
-| Channels | Mono (assumed) | Not specified | **Unknown** (mono conversion method) |
-| Target duration | 4.0 s | Config only | Inspected |
-| Crop policy | center_crop_or_right_pad | Name only | **Unknown** (index rounding, alignment) |
-| n_mels | 64 | Config only | Inspected |
-| n_fft | 512 | Config only | Inspected |
-| hop_length | 160 | Config only | Inspected |
-| mel_power | 2.0 | Config only | Inspected |
-| mel_center | true | Config only | Inspected |
-| pad_mode | reflect | Config only | Inspected |
-| mel_scale | htk | Config only | Inspected |
-| mel_norm | null | Config only | Inspected (null) |
-| Window | hann | Config only | **Unknown** (periodic vs symmetric) |
-| f_min / f_max | Not in config | None | **Unknown** (defaults assumed by librosa: 0..sr/2; unverified) |
-| Log transformation | epsilon only | None | **Unknown** (ln vs log10 vs log1p) |
-| Log epsilon | 1e-6 | Config only | Inspected |
-| Normalization | per_recording_mean_std | Name only | **Unknown** (order vs log, population vs sample std, dims) |
-| Std floor | 1e-5 | Config only | Inspected |
-| Resampling method | Not specified | None | **Unknown** |
-| Crop alignment | Not specified | None | **Unknown** |
+## Authoritative source
 
-## Unknowns (must not be guessed)
+- Notebook: `D:\Projects\SpeechShield-Backups\SpeechShield_v4_high_throughput.ipynb`, Layer 2 "HIGH-THROUGHPUT AUDIO PREPROCESSOR".
+- Configs: local `backend/artifacts/v4/v4_config.json` and `preprocessing_config.json`.
+- Golden archive: `D:\Projects\SpeechShield-Backups\speechshield_v4_preprocessing_reference.zip`, extracted to `D:\Projects\SpeechShield-Backups\v4_reference_extracted`.
 
-1. Natural log vs base-10 log vs log1p.
-2. Mel f_min / f_max.
-3. Hann window periodicity (librosa default periodic=True; training may differ).
-4. Resampling filter (librosa default kaiser-best; training may differ).
-5. Stereo-to-mono downmix method.
-6. Center-crop index rounding and right-pad fill.
-7. Normalization order relative to log.
-8. Population vs sample standard deviation.
-9. Normalization axes (per-recording vs per-feature).
+## Preprocessing sequence (verified, implemented in `backend/app/ml/preprocessor.py`)
 
-## Missing evidence required from original Kaggle runtime
+1. Decode WAV/FLAC with soundfile (`always_2d=True`, float32).
+2. Mono: arithmetic mean along axis 1 (float32) if 2D.
+3. Reject empty / non-finite / invalid sr.
+4. Resample with `scipy.signal.resample_poly`, gcd-reduced up/down factors, default filter, only if sr != 16000.
+5. If longer than 64000: `start=(len-64000)//2`, slice `[start:start+64000]`.
+6. If shorter: right-pad zeros to 64000.
+7. Contiguous float32.
+8. Mel: `torchaudio.transforms.MelSpectrogram` (sr=16000, n_fft=512, win_length=512, hop=160, f_min=0, f_max=8000, n_mels=64, hann window periodic, power=2.0, normalized=False, center=True, pad_mode=reflect, norm=None, mel_scale=htk).
+9. `log_mel = log(mel + 1e-6)`.
+10. mean over dims (1,2) keepdim; std population (unbiased=False) clamp_min(1e-5).
+11. `features = ((log_mel - mean)/std).unsqueeze(1)` → (1,1,64,401) float32.
+12. FP16 cache round trip: float32 → float16 → float32, then model input (1,1,64,401).
 
-To unblock, export a small golden reference package containing, per example:
+## Per-stage parity (all 5 fixtures)
 
-- Input WAV (or deterministic source waveform) + metadata.
-- Expected cropped/padded waveform.
-- Expected log-Mel tensor (shape, dtype, values).
-- Expected normalized feature tensor.
-- Expected model logit and sigmoid spoof probability.
+| Fixture | waveform | mel | log_mel | mean | std | normalized | fp16 | model_input | logit | prob |
+|---|---|---|---|---|---|---|---|---|---|---|
+| genuine_normal | PASS 0 | PASS 9.16e-5 | PASS 1.82e-4 | PASS 0 | PASS 0 | PASS 6.56e-5 | PASS 9.77e-4 | PASS 9.77e-4 | FAIL 9.66e-3 | PASS 6.07e-9 |
+| synthetic_normal | PASS 0 | PASS 1.83e-4 | PASS 1.24e-3 | PASS 1.43e-6 | PASS 1.91e-6 | PASS 2.75e-4 | PASS 1.95e-3 | PASS 1.95e-3 | FAIL 1.73e-2 | FAIL 3.96e-3 |
+| genuine_short_2s | PASS 0 | PASS 4.58e-5 | PASS 1.24e-4 | PASS 2.86e-6 | PASS 0 | PASS 2.23e-5 | PASS 9.77e-4 | PASS 9.77e-4 | FAIL 6.10e-3 | FAIL 9.38e-4 |
+| genuine_long_6s | PASS 0 | PASS 6.10e-5 | PASS 2.17e-4 | PASS 4.77e-7 | PASS 0 | PASS 6.57e-5 | PASS 9.77e-4 | PASS 9.77e-4 | FAIL 3.78e-3 | PASS 1.23e-7 |
+| genuine_non16k_22050 | PASS 0 | PASS 9.16e-5 | PASS 3.16e-4 | PASS 0 | PASS 2.38e-7 | PASS 9.48e-5 | PASS 9.77e-4 | PASS 9.77e-4 | FAIL 6.60e-3 | FAIL 1.19e-3 |
 
-Representative examples needed:
-1. Normal-length genuine recording.
-2. Synthetic (spoof) recording.
-3. Shorter-than-4s recording.
-4. Longer-than-4s recording.
-5. Non-16-kHz input.
+Numbers are max absolute error. Tolerances justified by CPU (torchaudio 2.11.0+cpu) vs GPU (2.11.0+cu128) floating point; fp16 tolerance covers one ulp. Standardized waveform is bit-exact.
 
-Also needed: the original training preprocessing source (Python cell) or notebook.
+## Checkpoint mismatch (blocker)
 
-## How to generate (Kaggle)
+The local checkpoint (`40c96ffa…`) differs from the golden manifest's checkpoint (`6f4f37e4…`). Feeding the golden's exact `model_input_fp32` to our model still yields a different logit (diff ~0.004–0.017), confirming weights differ, not just preprocessing. No file with hash `6f4f37e4…` exists on disk.
 
-Run the original training preprocessing on the above examples and save arrays with `numpy.save` / `torch.save`, plus input WAVs, into a zip. Provide SHA-256s. Do not fabricate.
+Therefore inference cannot be declared parity-verified for our checkpoint. Inference remains disabled. The preprocessing pipeline itself is verified and implemented.
 
-## Parity comparison metrics (to apply once fixtures exist)
+## Tolerances
 
-- Max absolute error, mean absolute error, relative error.
-- Tensor shape, dtype, NaN/Inf count.
-- Logit and probability tolerance.
+- waveform: 0 (exact)
+- mel: 2e-4
+- log_mel: 2e-3
+- mean/std: 1e-5
+- normalized: 5e-4
+- fp16/model_input: 2e-3
+- logit: 1e-4 (strict; fails due to checkpoint)
+- prob: 1e-5 (strict; fails for some due to checkpoint)
 
-## Current decision
+## Validation command
 
-Inference stays disabled. No prediction endpoint. `inference_ready = false`. Do not treat this as a pass.
+```
+backend\.venv\Scripts\python.exe backend\scripts\validate_v4_parity.py --reference-dir D:\Projects\SpeechShield-Backups\v4_reference_extracted
+```
+
+Report: `backend/.validation_reports/v4_parity_report.json` (gitignored).
+
+## Status
+
+BLOCKED due to checkpoint hash mismatch. Preprocessing implementation verified and tested. Public prediction API remains disabled.
