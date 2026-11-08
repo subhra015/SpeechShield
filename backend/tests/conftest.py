@@ -23,3 +23,31 @@ from fastapi.testclient import TestClient  # noqa: E402
 def client():
     with TestClient(app) as c:
         yield c
+
+
+@pytest.fixture(autouse=True)
+def _reset_rate_limiters(client):
+    try:
+        from app.middleware import RATE_LIMIT_HITS
+
+        RATE_LIMIT_HITS.clear()
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        import app.routers.audio as audio_router
+
+        audio_router._upload_hits.clear()
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        import app.routers.auth as auth_router
+
+        auth_router._login_hits_ip.clear()
+        auth_router._login_hits_account.clear()
+    except Exception:  # noqa: BLE001
+        pass
+    import contextlib
+
+    with contextlib.suppress(Exception):
+        client.cookies.clear()
+    yield

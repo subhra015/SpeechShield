@@ -10,6 +10,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
+from app.config import settings
+
 
 class CorrelationIdMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next) -> Response:
@@ -30,11 +32,14 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 
+# Process-global rate-limit buckets (clearable in tests).
+RATE_LIMIT_HITS: dict[str, deque[float]] = defaultdict(deque)
+
+
 class RateLimitMiddleware(BaseHTTPMiddleware):
     def __init__(self, app, per_minute: int = 60):
         super().__init__(app)
         self.per_minute = per_minute
-        self._hits: dict[str, deque[float]] = defaultdict(deque)
 
     async def dispatch(self, request: Request, call_next) -> Response:
         # Only rate-limit API routes.
@@ -42,7 +47,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
         client = request.client.host if request.client else "unknown"
         now = time.monotonic()
-        window = self._hits[client]
+        window = RATE_LIMIT_HITS[client]
         while window and now - window[0] > 60.0:
             window.popleft()
         if len(window) >= self.per_minute:
@@ -52,4 +57,29 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 headers={"Retry-After": "60"},
             )
         window.append(now)
+        return await call_next(request)
+
+
+class CSRFMiddleware(BaseHTTPMiddleware):
+    """Double-submit CSRF protection for cookie-authenticated unsafe requests."""
+
+    UNSAFE = {"POST", "PUT", "PATCH", "DELETE"}
+    EXEMPT_PATHS = {"/api/auth/login", "/api/auth/register", "/api/auth/token"}
+
+    async def dispatch(self, request: Request, call_next) -> Response:
+        if (
+            request.method in self.UNSAFE
+            and request.url.path.startswith("/api")
+            and request.url.path not in self.EXEMPT_PATHS
+        ):
+            # Only enforce when cookie auth is present (not Bearer).
+            has_cookie = settings.session_cookie_name in request.cookies
+            has_bearer = request.headers.get("Authorization", "").lower().startswith("bearer ")
+            if has_cookie and not has_bearer:
+                csrf_cookie = request.cookies.get(settings.csrf_cookie_name)
+                csrf_header = request.headers.get("X-CSRF-Token")
+                if not csrf_cookie or not csrf_header or csrf_cookie != csrf_header:
+                    return JSONResponse(
+                        status_code=403, content={"detail": "CSRF validation failed"}
+                    )
         return await call_next(request)

@@ -1,6 +1,9 @@
 # Private SpeechShield model artifacts
 /backend/artifacts/
 
+# Private audio uploads (Layer 5)
+/backend/data/audio_uploads/
+
 # Environment secrets
 .env
 .env.*

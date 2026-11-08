@@ -54,6 +54,23 @@ class Settings(BaseSettings):
     # --- Rate limiting (Layer 3) ---
     rate_limit_per_minute: int = 60
 
+    # --- Session cookies (Layer 6) ---
+    session_cookie_name: str = "speechshield_session"
+    csrf_cookie_name: str = "speechshield_csrf"
+    cookie_secure: bool = False
+    cookie_samesite: str = "lax"
+    cookie_path: str = "/"
+
+    # --- Audio upload (Layer 5) ---
+    audio_storage_dir: str = "data/audio_uploads"
+    max_upload_size_bytes: int = 10 * 1024 * 1024
+    max_audio_duration_seconds: float = 30.0
+    max_audio_channels: int = 2
+    min_sample_rate: int = 8000
+    max_sample_rate: int = 96000
+    max_decoded_samples: int = 96000 * 30 * 2
+    upload_rate_limit_per_minute: int = 10
+
     # --- Optional integrity override (leave empty to use manifest) ---
     expected_checkpoint_sha256: str | None = None
 

@@ -32,9 +32,20 @@ Authentication hardening & DB-backed audit logging:
 
 Inference remains blocked. No prediction/upload/analysis endpoint. V4 checkpoint unchanged.
 
-## Outstanding / next
+## Layer 5 — Complete
 
-- Layer 2: V4 preprocessing parity verification (log transform, Mel semantics, crop/pad, normalization, tensor shape/numerics). Until then inference remains blocked.
-- FFmpeg integration for MP3/WebM (planned, not yet).
-- Docker images not built/tested locally (Docker not installed in dev environment); CI will build.
-- httpx/starlette deprecation warning remains (upstream); documented, not suppressed.
+Secure audio upload, validation, private storage & user ownership. Inference still blocked.
+
+## Layer 6 — Complete
+
+Secure frontend authentication & audio upload integration (HttpOnly cookie, CSRF, React Router, upload UI).
+
+## Layer 7 — Complete (this change)
+
+Backend audio job lifecycle + premium frontend redesign:
+- AudioJob model, state machine (QUEUED→VALIDATING→VALIDATED→BLOCKED_PENDING_INFERENCE_AUTHORIZATION / FAILED / CANCELLED), preflight (no inference).
+- Endpoints: POST /api/audio/{id}/jobs, GET /api/jobs, GET /api/jobs/{id}, POST /api/jobs/{id}/cancel.
+- Idempotent job creation, ownership checks, audit events.
+- Frontend: design system (tokens, card/btn/input/badge), app shell with sidebar, Login/Register/Dashboard redesign, responsive, reduced-motion support.
+- Tests: 75 passed (8 new job lifecycle tests). Frontend lint + build pass.
+- Inference still blocked.

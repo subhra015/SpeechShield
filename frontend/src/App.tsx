@@ -1,41 +1,54 @@
-import { useEffect, useState } from "react";
-import { API_BASE_URL } from "./config";
+// frontend/src/App.tsx
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { AuthProvider, useAuth } from "./auth/AuthContext";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import Dashboard from "./pages/Dashboard";
+import { ProtectedRoute } from "./components/ProtectedRoute";
 
-type Health = { application: string; model_ready: boolean; model_error: string | null; status: string };
-type ModelInfo = {
-  model_version: string;
-  architecture: string;
-  checkpoint_sha256: string | null;
-  sha256_verified: boolean;
-  inference_status: string;
-  inference_production_ready: boolean;
-};
+function Shell() {
+  const { user, logout } = useAuth();
+  return (
+    <div className="min-h-screen flex">
+      <aside className="w-60 bg-[var(--bg-1)] border-r border-[var(--border)] p-4 flex flex-col gap-2">
+        <div className="flex items-center gap-2 mb-6">
+          <div className="w-8 h-8 rounded-lg bg-[var(--accent)] flex items-center justify-center text-[#0a0e1a] font-bold">S</div>
+          <span className="font-semibold tracking-tight">SpeechShield</span>
+        </div>
+        <nav className="flex flex-col gap-1">
+          <a href="/dashboard" className="px-3 py-2 rounded hover:bg-[var(--surface-2)]">Dashboard</a>
+        </nav>
+        <div className="mt-auto">
+          <div className="text-sm text-[var(--text-muted)] mb-2">{user?.username}</div>
+          <button onClick={logout} className="btn btn-ghost w-full">Logout</button>
+        </div>
+      </aside>
+      <main className="flex-1 p-8 overflow-auto">
+        <Outlet />
+      </main>
+    </div>
+  );
+}
+
+function Home() {
+  const { user, loading } = useAuth();
+  if (loading) return <div className="p-8">Loading...</div>;
+  return user ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />;
+}
 
 export default function App() {
-  const [health, setHealth] = useState<Health | null>(null);
-  const [info, setInfo] = useState<ModelInfo | null>(null);
-
-  useEffect(() => {
-    fetch(`${API_BASE_URL}/api/health`).then((r) => r.json()).then(setHealth).catch(() => setHealth(null));
-    fetch(`${API_BASE_URL}/api/model/info`).then((r) => r.json()).then(setInfo).catch(() => setInfo(null));
-  }, []);
-
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-8">
-      <h1 className="text-2xl font-bold mb-4">SpeechShield (Layer 0)</h1>
-      <p className="text-slate-400 mb-6">
-        Foundation only. No inference endpoint is exposed (preprocessing parity unverified).
-      </p>
-
-      <section className="mb-6">
-        <h2 className="text-lg font-semibold mb-2">Health</h2>
-        <pre className="bg-slate-900 p-4 rounded text-sm">{JSON.stringify(health, null, 2)}</pre>
-      </section>
-
-      <section>
-        <h2 className="text-lg font-semibold mb-2">Model Info (safe metadata)</h2>
-        <pre className="bg-slate-900 p-4 rounded text-sm">{JSON.stringify(info, null, 2)}</pre>
-      </section>
-    </div>
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/dashboard" element={<ProtectedRoute><Shell /></ProtectedRoute>}>
+            <Route index element={<Dashboard />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }

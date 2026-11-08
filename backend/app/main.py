@@ -13,10 +13,19 @@ from app.api import api_router
 from app.config import settings
 from app.db.session import Base, engine
 from app.logging_config import configure_logging
-from app.middleware import CorrelationIdMiddleware, RateLimitMiddleware, SecurityHeadersMiddleware
+from app.middleware import (
+    CorrelationIdMiddleware,
+    CSRFMiddleware,
+    RateLimitMiddleware,
+    SecurityHeadersMiddleware,
+)
+from app.models import audio_asset as _audio_model  # noqa: F401  (register model)
+from app.models import audio_job as _audio_job_model  # noqa: F401  (register model)
 from app.models import audit_log as _audit_model  # noqa: F401  (register model)
 from app.models import user as _user_model  # noqa: F401  (register model)
+from app.routers.audio import router as audio_router
 from app.routers.auth import router as auth_router
+from app.routers.job import router as job_router
 from app.services.model_loader import load_v4_model, set_model_handle
 
 
@@ -52,6 +61,7 @@ app = FastAPI(
 
 app.add_middleware(CorrelationIdMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(CSRFMiddleware)
 app.add_middleware(RateLimitMiddleware, per_minute=settings.rate_limit_per_minute)
 app.add_middleware(
     CORSMiddleware,
@@ -62,6 +72,8 @@ app.add_middleware(
 )
 
 app.include_router(auth_router)
+app.include_router(audio_router)
+app.include_router(job_router)
 
 
 @app.exception_handler(RequestValidationError)
