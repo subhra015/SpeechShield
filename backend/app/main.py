@@ -14,6 +14,7 @@ from app.config import settings
 from app.db.session import Base, engine
 from app.logging_config import configure_logging
 from app.middleware import CorrelationIdMiddleware, RateLimitMiddleware, SecurityHeadersMiddleware
+from app.models import audit_log as _audit_model  # noqa: F401  (register model)
 from app.models import user as _user_model  # noqa: F401  (register model)
 from app.routers.auth import router as auth_router
 from app.services.model_loader import load_v4_model, set_model_handle

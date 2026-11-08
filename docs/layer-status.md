@@ -14,9 +14,23 @@ Inference status: still `BLOCKED_PREPROCESSING_PARITY`. No prediction/audio endp
 
 Preprocessing pipeline implemented and verified against 5 approved golden fixtures (all stages pass). Checkpoint `40c96ffa…` matches approved manifest. Inference remains disabled pending authentication layer. V4 checkpoint unchanged.
 
-## Layer 3 — Complete (this change)
+## Layer 3 — Complete
 
 Authentication & API security: User model (SQLAlchemy/SQLite), registration/login (bcrypt), JWT issuance, `/api/auth/me`, rate limiting, security headers, DB table creation on startup. Inference still blocked (`PREPROCESSING_PARITY_VERIFIED=False`, `inference_ready=False`). No prediction endpoint added.
+
+## Layer 4 — Complete (this change)
+
+Authentication hardening & DB-backed audit logging:
+- JWT secret hardening (>=32 chars in production, reject defaults, explicit HS256 allowlist).
+- JWT validation tests (expired, tampered, invalid signature, alg confusion, malformed, missing bearer, unknown/disabled user).
+- Stricter login rate limiting (per-IP + per-account, 429, generic errors).
+- `AuditLog` model (UTC-aware timestamps via custom TypeDecorator, indexes, bounded fields).
+- Audit events for register/login/failures/rate-limit/auth failures with correlation IDs.
+- Audit records never contain passwords/tokens/secrets; sanitization enforced.
+- UTC timestamp cleanup (datetime.now(UTC), timezone-aware columns).
+- Additive schema (create_all, idempotent). No data loss.
+
+Inference remains blocked. No prediction/upload/analysis endpoint. V4 checkpoint unchanged.
 
 ## Outstanding / next
 

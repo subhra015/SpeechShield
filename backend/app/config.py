@@ -7,7 +7,7 @@ Loaded from environment variables via pydantic-settings.
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Root of the backend package (speechshield/backend)
@@ -82,6 +82,33 @@ class Settings(BaseSettings):
         if len(v) < 16:
             raise ValueError("jwt_secret_key must be at least 16 characters")
         return v
+
+    @field_validator("jwt_algorithm")
+    @classmethod
+    def _validate_jwt_algorithm(cls, v: str) -> str:
+        allowed = {"HS256"}
+        if v not in allowed:
+            raise ValueError(f"jwt_algorithm must be one of {sorted(allowed)}")
+        return v
+
+    @model_validator(mode="after")
+    def _validate_production_secret(self) -> "Settings":
+        insecure = {
+            "dev-insecure-change-me-in-production",
+            "change-me",
+            "secret",
+            "password",
+            "",
+        }
+        if self.environment == "production" and (
+            self.jwt_secret_key in insecure or len(self.jwt_secret_key) < 32
+        ):
+            raise ValueError(
+                "Production jwt_secret_key must be a high-entropy secret of at least 32 characters "
+                "and must not be a default/placeholder value. "
+                'Generate one with: python -c "import secrets; print(secrets.token_urlsafe(32))"'
+            )
+        return self
 
     model_config = SettingsConfigDict(
         env_file=str(BACKEND_DIR / ".env"),
