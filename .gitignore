@@ -31,6 +31,9 @@ build/
 # Local validation reports
 /backend/.validation_reports/
 
+# Local evaluation data (Layer 11)
+/backend/.local_evaluation/
+
 # IDE and OS files
 .idea/
 .vscode/

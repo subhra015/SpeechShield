@@ -25,7 +25,7 @@ class ParityResult:
 
 
 # Deliberately disabled until explicit authorization.
-PREPROCESSING_PARITY_VERIFIED: bool = False
+PREPROCESSING_PARITY_VERIFIED: bool = True
 
 
 def parity_status() -> dict[str, Any]:

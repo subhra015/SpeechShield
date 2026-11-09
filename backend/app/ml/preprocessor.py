@@ -63,23 +63,37 @@ MEL_SCALE: str = _PRE_CFG["mel_scale"]
 TEMPERATURE: float = float(_V4_CFG.get("temperature", 1.0))
 THRESHOLD: float = float(_V4_CFG["classification_threshold"])
 
-# Cached mel transform (CPU)
-MEL_TRANSFORM = torchaudio.transforms.MelSpectrogram(
-    sample_rate=SR,
-    n_fft=N_FFT,
-    win_length=N_FFT,
-    hop_length=HOP,
-    f_min=0.0,
-    f_max=SR / 2,
-    n_mels=N_MELS,
-    window_fn=torch.hann_window,
-    power=MEL_POWER,
-    normalized=False,
-    center=MEL_CENTER,
-    pad_mode=MEL_PAD_MODE,
-    norm=MEL_NORM,
-    mel_scale=MEL_SCALE,
-).to(PREPROCESSING_DEVICE)
+
+def _mel_device() -> torch.device:
+    from app.config import settings
+
+    dev = getattr(settings, "preprocessing_device", "cpu")
+    if dev == "cuda" and torch.cuda.is_available():
+        return torch.device("cuda:0")
+    return torch.device("cpu")
+
+
+# Cached mel transform (device-aware)
+MEL_TRANSFORM = (
+    torchaudio.transforms.MelSpectrogram(
+        sample_rate=SR,
+        n_fft=N_FFT,
+        win_length=N_FFT,
+        hop_length=HOP,
+        f_min=0.0,
+        f_max=SR / 2,
+        n_mels=N_MELS,
+        window_fn=torch.hann_window,
+        power=MEL_POWER,
+        normalized=False,
+        center=MEL_CENTER,
+        pad_mode=MEL_PAD_MODE,
+        norm=MEL_NORM,
+        mel_scale=MEL_SCALE,
+    )
+    .to(_mel_device())
+    .to(PREPROCESSING_DEVICE)
+)
 
 
 def decode_audio(path: str | Path) -> tuple[np.ndarray, int]:
@@ -111,12 +125,9 @@ def standardize_audio(audio: np.ndarray, source_sr: int) -> tuple[np.ndarray, fl
 
 @torch.inference_mode()
 def mel_from_waveform(waveform: np.ndarray) -> torch.Tensor:
-    wb = (
-        torch.from_numpy(np.ascontiguousarray(waveform, dtype=np.float32))
-        .unsqueeze(0)
-        .to(PREPROCESSING_DEVICE)
-    )
-    return MEL_TRANSFORM(wb)
+    device = MEL_TRANSFORM.mel_scale.fb.device
+    wb = torch.from_numpy(np.ascontiguousarray(waveform, dtype=np.float32)).unsqueeze(0).to(device)
+    return MEL_TRANSFORM(wb).detach().cpu()
 
 
 def extract_features(path: str | Path) -> dict[str, Any]:

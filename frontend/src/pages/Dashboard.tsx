@@ -1,154 +1,88 @@
-// frontend/src/pages/Dashboard.tsx
-import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+// frontend/src/pages/Dashboard.tsx (Overview)
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { api } from "../api";
 
-type Asset = {
-  id: number;
-  detected_format: string;
-  file_size_bytes: number;
-  duration_seconds: number;
-  sample_rate: number;
-  channels: number;
-  original_filename: string | null;
-  created_at: string;
-};
+type Asset = { id: number; detected_format: string; file_size_bytes: number; duration_seconds: number; created_at: string; original_filename: string | null };
 
 export default function Dashboard() {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
+  const { user } = useAuth();
   const [assets, setAssets] = useState<Asset[]>([]);
+  const [jobs, setJobs] = useState<Array<{ status?: string }>>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [uploading, setUploading] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const fileRef = useRef<HTMLInputElement>(null);
-
-  async function loadAssets() {
-    setLoading(true);
-    setError("");
-    try {
-      const res = await api("/api/audio?limit=50&offset=0");
-      if (!res.ok) throw new Error("Failed to load assets");
-      const data = await res.json();
-      setAssets(data.items || []);
-    } catch {
-      setError("Failed to load assets");
-    } finally {
-      setLoading(false);
-    }
-  }
 
   useEffect(() => {
-    loadAssets();
+    (async () => {
+      try {
+        const r = await api("/api/audio?limit=5&offset=0");
+        if (r.ok) setAssets((await r.json()).items || []);
+        const j = await api("/api/jobs?limit=5&offset=0");
+        if (j.ok) setJobs((await j.json()).items || []);
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, []);
 
-  async function onUpload(e: React.FormEvent) {
-    e.preventDefault();
-    const file = fileRef.current?.files?.[0];
-    if (!file) return;
-    if (file.size > 10 * 1024 * 1024) {
-      setError("File too large (max 10 MB)");
-      return;
-    }
-    setUploading(true);
-    setProgress(0);
-    setError("");
-    const form = new FormData();
-    form.append("file", file);
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", (import.meta.env.VITE_API_BASE_URL || "") + "/api/audio");
-    xhr.withCredentials = true;
-    // csrf
-    const csrf = document.cookie.match(/speechshield_csrf=([^;]+)/)?.[1];
-    if (csrf) xhr.setRequestHeader("X-CSRF-Token", decodeURIComponent(csrf));
-    xhr.upload.onprogress = (ev) => {
-      if (ev.lengthComputable) setProgress(Math.round((ev.loaded / ev.total) * 100));
-    };
-    xhr.onload = () => {
-      setUploading(false);
-      if (xhr.status >= 200 && xhr.status < 300) {
-        loadAssets();
-      } else {
-        try {
-          const j = JSON.parse(xhr.responseText);
-          setError(j.detail || "Upload failed");
-        } catch {
-          setError("Upload failed");
-        }
-      }
-    };
-    xhr.onerror = () => {
-      setUploading(false);
-      setError("Network error");
-    };
-    xhr.send(form);
-  }
-
-  async function onDelete(id: number) {
-    if (!confirm("Delete this asset?")) return;
-    const res = await api(`/api/audio/${id}`, { method: "DELETE" });
-    if (res.ok || res.status === 204) {
-      loadAssets();
-    } else {
-      setError("Delete failed");
-    }
-  }
-
-  async function onLogout() {
-    await logout();
-    navigate("/login");
-  }
-
   return (
-    <div className="text-slate-100 space-y-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <div className="flex items-center gap-4">
-          <span className="text-slate-400">{user?.username}</span>
-          <button onClick={onLogout} className="bg-slate-700 px-3 py-1 rounded">Logout</button>
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-3xl font-bold">Understand what's behind the voice.</h1>
+        <p className="text-[var(--text-muted)] mt-2 max-w-2xl">
+          Examine audio recordings for signs of synthetic speech with SpeechShield's V4 detection engine.
+        </p>
+        <Link to="/dashboard/analyze" className="btn btn-primary mt-4 inline-flex">Analyze a recording</Link>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="card">
+          <div className="text-xs text-[var(--text-muted)] uppercase tracking-wider">Recordings</div>
+          <div className="text-3xl font-bold mt-2">{loading ? "…" : assets.length}</div>
+        </div>
+        <div className="card">
+          <div className="text-xs text-[var(--text-muted)] uppercase tracking-wider">Recent jobs</div>
+          <div className="text-3xl font-bold mt-2">{loading ? "…" : jobs.length}</div>
+        </div>
+        <div className="card">
+          <div className="text-xs text-[var(--text-muted)] uppercase tracking-wider">Blocked</div>
+          <div className="text-3xl font-bold mt-2">{loading ? "…" : jobs.filter((j) => j.status?.includes("BLOCKED")).length}</div>
+        </div>
+        <div className="card">
+          <div className="text-xs text-[var(--text-muted)] uppercase tracking-wider">Failed</div>
+          <div className="text-3xl font-bold mt-2">{loading ? "…" : jobs.filter((j) => j.status === "FAILED").length}</div>
         </div>
       </div>
 
-      <section className="mb-8 bg-slate-900 p-6 rounded">
-        <h2 className="text-lg font-semibold mb-3">Upload audio (WAV/FLAC, max 10 MB)</h2>
-        <form onSubmit={onUpload} className="space-y-3">
-          <input ref={fileRef} type="file" accept=".wav,.flac,audio/wav,audio/flac" className="block" />
-          {uploading && (
-            <div className="w-full bg-slate-800 rounded h-2">
-              <div className="bg-blue-600 h-2 rounded" style={{ width: `${progress}%` }} />
-            </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="card">
+          <h2 className="font-semibold mb-3">Recent recordings</h2>
+          {loading ? (
+            <div className="space-y-2"><div className="skeleton h-10" /><div className="skeleton h-10" /></div>
+          ) : assets.length === 0 ? (
+            <p className="text-[var(--text-muted)] text-sm">No recordings yet. Upload one to get started.</p>
+          ) : (
+            <ul className="space-y-2">
+              {assets.map((a) => (
+                <li key={a.id} className="flex justify-between text-sm">
+                  <span>{a.original_filename || `asset ${a.id}`}</span>
+                  <span className="text-[var(--text-muted)]">{a.detected_format} · {a.duration_seconds.toFixed(1)}s</span>
+                </li>
+              ))}
+            </ul>
           )}
-          <button disabled={uploading} className="bg-blue-600 px-4 py-2 rounded disabled:opacity-50">
-            {uploading ? `Uploading ${progress}%` : "Upload"}
-          </button>
-        </form>
-        {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
-      </section>
-
-      <section>
-        <h2 className="text-lg font-semibold mb-3">Your uploads</h2>
-        {loading ? (
-          <p className="text-slate-400">Loading...</p>
-        ) : assets.length === 0 ? (
-          <p className="text-slate-400">No uploads yet.</p>
-        ) : (
-          <ul className="space-y-2">
-            {assets.map((a) => (
-              <li key={a.id} className="bg-slate-900 p-4 rounded flex justify-between items-center">
-                <div>
-                  <div className="font-medium">{a.original_filename || `asset ${a.id}`}</div>
-                  <div className="text-sm text-slate-400">
-                    {a.detected_format} · {a.file_size_bytes} bytes · {a.duration_seconds.toFixed(2)}s · {a.sample_rate} Hz · {a.channels} ch
-                  </div>
-                </div>
-                <button onClick={() => onDelete(a.id)} className="text-red-400 text-sm">Delete</button>
-              </li>
-            ))}
+        </div>
+        <div className="card">
+          <h2 className="font-semibold mb-3">System status</h2>
+          <ul className="space-y-2 text-sm">
+            <li className="flex justify-between"><span>Backend</span><span className="badge badge-success">Connected</span></li>
+            <li className="flex justify-between"><span>Session</span><span className="badge badge-success">Authenticated</span></li>
+            <li className="flex justify-between"><span>Upload</span><span className="badge badge-success">Available</span></li>
+            <li className="flex justify-between"><span>Inference</span><span className="badge badge-warn">Blocked (authorization pending)</span></li>
           </ul>
-        )}
-      </section>
+          <p className="text-xs text-[var(--text-muted)] mt-3">Signed in as {user?.username}</p>
+        </div>
+      </div>
     </div>
   );
 }

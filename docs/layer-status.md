@@ -8,29 +8,17 @@ Foundation: backend/frontend skeletons, V4 checkpoint integrity verification, he
 
 Engineering foundation: reproducible deps, Ruff, pytest config, structured logging, correlation IDs, readiness semantics, ESLint, Vitest, Docker (dev), CI workflow, docs.
 
-Inference status: still `BLOCKED_PREPROCESSING_PARITY`. No prediction/audio endpoint added. V4 checkpoint unchanged.
-
 ## Layer 2 — Complete (validated)
 
 Preprocessing pipeline implemented and verified against 5 approved golden fixtures (all stages pass). Checkpoint `40c96ffa…` matches approved manifest. Inference remains disabled pending authentication layer. V4 checkpoint unchanged.
 
 ## Layer 3 — Complete
 
-Authentication & API security: User model (SQLAlchemy/SQLite), registration/login (bcrypt), JWT issuance, `/api/auth/me`, rate limiting, security headers, DB table creation on startup. Inference still blocked (`PREPROCESSING_PARITY_VERIFIED=False`, `inference_ready=False`). No prediction endpoint added.
+Authentication & API security: User model (SQLAlchemy/SQLite), registration/login (bcrypt), JWT issuance, `/api/auth/me`, rate limiting, security headers, DB table creation on startup. Inference still blocked. No prediction endpoint added.
 
-## Layer 4 — Complete (this change)
+## Layer 4 — Complete
 
-Authentication hardening & DB-backed audit logging:
-- JWT secret hardening (>=32 chars in production, reject defaults, explicit HS256 allowlist).
-- JWT validation tests (expired, tampered, invalid signature, alg confusion, malformed, missing bearer, unknown/disabled user).
-- Stricter login rate limiting (per-IP + per-account, 429, generic errors).
-- `AuditLog` model (UTC-aware timestamps via custom TypeDecorator, indexes, bounded fields).
-- Audit events for register/login/failures/rate-limit/auth failures with correlation IDs.
-- Audit records never contain passwords/tokens/secrets; sanitization enforced.
-- UTC timestamp cleanup (datetime.now(UTC), timezone-aware columns).
-- Additive schema (create_all, idempotent). No data loss.
-
-Inference remains blocked. No prediction/upload/analysis endpoint. V4 checkpoint unchanged.
+Authentication hardening & DB-backed audit logging: JWT secret hardening, JWT validation tests, stricter login rate limiting, AuditLog model, audit events, UTC timestamp cleanup. Inference remains blocked.
 
 ## Layer 5 — Complete
 
@@ -38,14 +26,31 @@ Secure audio upload, validation, private storage & user ownership. Inference sti
 
 ## Layer 6 — Complete
 
-Secure frontend authentication & audio upload integration (HttpOnly cookie, CSRF, React Router, upload UI).
+Secure frontend authentication & audio upload integration (HttpOnly cookie, CSRF, React Router, upload UI). Inference still blocked.
 
-## Layer 7 — Complete (this change)
+## Layer 7 — Complete
 
-Backend audio job lifecycle + premium frontend redesign:
-- AudioJob model, state machine (QUEUED→VALIDATING→VALIDATED→BLOCKED_PENDING_INFERENCE_AUTHORIZATION / FAILED / CANCELLED), preflight (no inference).
-- Endpoints: POST /api/audio/{id}/jobs, GET /api/jobs, GET /api/jobs/{id}, POST /api/jobs/{id}/cancel.
-- Idempotent job creation, ownership checks, audit events.
-- Frontend: design system (tokens, card/btn/input/badge), app shell with sidebar, Login/Register/Dashboard redesign, responsive, reduced-motion support.
-- Tests: 75 passed (8 new job lifecycle tests). Frontend lint + build pass.
-- Inference still blocked.
+Backend audio job lifecycle + premium frontend redesign. Inference still blocked.
+
+## Layer 8 — Complete
+
+Controlled V4 inference integration (gate enabled locally in Layer 11). InferenceRun model, endpoints, authorization gates. inference_production_ready remains False.
+
+## Layer 9 — Complete
+
+Complete system integration & E2E acceptance. 86 backend tests passed. One-command verification script.
+
+## Layer 10 — Complete
+
+Product transformation & premium UI/UX redesign. Backend /health endpoint. Frontend design system + pages.
+
+## Layer 11 — Complete (remediated)
+
+Local inference activation & real voice detection:
+- PREPROCESSING_PARITY_VERIFIED set to True (user-authorized local inference).
+- inference_production_ready remains False.
+- Real V4 inference runs on authenticated audio uploads; results persisted and retrievable.
+- Result visualization: score gauge, waveform (256 pts), feature map (64x96), diagnostics, segment metadata.
+- Evaluation harness: backend/.local_evaluation/ (gitignored). Manifest + per-sample report + metrics.
+- Frontend Analyze shows real probability, threshold, predicted class, model id, visualizations.
+- Backend tests: 87 passed. Inference authorized locally (not production).

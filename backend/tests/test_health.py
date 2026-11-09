@@ -16,3 +16,9 @@ def test_health_distinguishes_model_readiness(client):
     # application availability != model readiness concept: both reported
     assert "model_ready" in data
     assert "application" in data
+
+
+def test_root_health_endpoint(client):
+    r = client.get("/health")
+    assert r.status_code == 200
+    assert r.json()["status"] == "ok"

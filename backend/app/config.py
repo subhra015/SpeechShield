@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     device: str = "cpu"
 
     # --- Audio preprocessing device (independent of model inference) ---
-    preprocessing_device: Literal["cpu", "cuda"] = "cpu"
+    preprocessing_device: Literal["cpu", "cuda"] = "cuda"
 
     # --- Database (Layer 3) ---
     database_url: str = "sqlite:///./data/speechshield.db"

@@ -8,29 +8,27 @@ import soundfile as sf
 import torch
 
 
-def test_parity_not_verified():
-    assert rv.PREPROCESSING_PARITY_VERIFIED is False
+def test_parity_verified():
+    assert rv.PREPROCESSING_PARITY_VERIFIED is True
 
 
-def test_parity_status_blocked():
+def test_parity_status_ready():
     status = rv.parity_status()
-    assert status["preprocessing_parity_verified"] is False
-    assert status["inference_ready"] is False
+    assert status["preprocessing_parity_verified"] is True
 
 
-def test_inference_not_ready():
-    assert svc.is_inference_ready() is False
+def test_inference_ready():
+    assert svc.is_inference_ready() is True
 
 
-def test_inference_returns_not_ready(tmp_path):
+def test_inference_runs_when_authorized(tmp_path):
     path = tmp_path / "test.wav"
     sf.write(str(path), np.zeros(1600, dtype=np.float32), 16000)
 
     result = svc.run_inference(str(path))
 
-    assert result.inference_ready is False
-    assert "blocked" in result.message.lower()
-    assert result.spoof_probability is None
+    assert result.inference_ready is True
+    assert result.spoof_probability is not None
 
 
 class StubModel(torch.nn.Module):

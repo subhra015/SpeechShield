@@ -22,9 +22,11 @@ from app.middleware import (
 from app.models import audio_asset as _audio_model  # noqa: F401  (register model)
 from app.models import audio_job as _audio_job_model  # noqa: F401  (register model)
 from app.models import audit_log as _audit_model  # noqa: F401  (register model)
+from app.models import inference_run as _inference_run_model  # noqa: F401  (register model)
 from app.models import user as _user_model  # noqa: F401  (register model)
 from app.routers.audio import router as audio_router
 from app.routers.auth import router as auth_router
+from app.routers.inference import router as inference_router
 from app.routers.job import router as job_router
 from app.services.model_loader import load_v4_model, set_model_handle
 
@@ -37,10 +39,24 @@ async def lifespan(app: FastAPI):
     logger = logging.getLogger("speechshield")
     logger.info("Starting %s (%s)", settings.app_name, settings.environment)
     Base.metadata.create_all(bind=engine)
+    from app.db.session import ensure_schema
+
+    ensure_schema()
     handle = load_v4_model()
     set_model_handle(handle)
     if handle.ready:
-        logger.info("V4 model loaded; sha256 verified; inference BLOCKED (preprocessing parity)")
+        from app.services.inference_service import verify_inference_authorization
+
+        auth = verify_inference_authorization()
+        if auth.ok:
+            logger.info(
+                "V4 model loaded and integrity verified; internal inference ready; production disabled"
+            )
+        else:
+            logger.info(
+                "V4 model loaded and integrity verified; internal inference blocked: %s",
+                auth.reason,
+            )
     else:
         logger.error("V4 model failed to load: %s", handle.error)
     yield
@@ -74,6 +90,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(audio_router)
 app.include_router(job_router)
+app.include_router(inference_router)
 
 
 @app.exception_handler(RequestValidationError)
@@ -106,13 +123,19 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 app.include_router(api_router)
 
 
+@app.get("/health", include_in_schema=False)
+def health_root():
+    return {"status": "ok"}
+
+
 @app.get("/", include_in_schema=False)
 def root():
     return {
         "service": settings.app_name,
         "version": settings.app_version,
-        "layer": "Layer 0",
+        "layer": "Layer 10",
         "docs": "/docs",
-        "health": "/api/health",
+        "health": "/health",
+        "api_health": "/api/health",
         "model_info": "/api/model/info",
     }

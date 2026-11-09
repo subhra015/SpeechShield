@@ -18,10 +18,22 @@ LEGAL_TRANSITIONS: dict[str, set[str]] = {
         JobStatus.FAILED.value,
         JobStatus.CANCELLED.value,
     },
-    JobStatus.VALIDATED.value: {JobStatus.BLOCKED_PENDING_INFERENCE_AUTHORIZATION.value},
+    JobStatus.VALIDATED.value: {
+        JobStatus.BLOCKED_PENDING_INFERENCE_AUTHORIZATION.value,
+        JobStatus.INFERENCE_RUNNING.value,
+    },
+    JobStatus.BLOCKED_PENDING_INFERENCE_AUTHORIZATION.value: {
+        JobStatus.INFERENCE_RUNNING.value,
+        JobStatus.CANCELLED.value,
+    },
+    JobStatus.INFERENCE_RUNNING.value: {
+        JobStatus.COMPLETED.value,
+        JobStatus.FAILED.value,
+        JobStatus.CANCELLED.value,
+    },
+    JobStatus.COMPLETED.value: set(),
     JobStatus.FAILED.value: set(),
     JobStatus.CANCELLED.value: set(),
-    JobStatus.BLOCKED_PENDING_INFERENCE_AUTHORIZATION.value: set(),
 }
 
 
