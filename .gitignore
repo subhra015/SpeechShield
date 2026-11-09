@@ -1,5 +1,21 @@
 # Private SpeechShield model artifacts
-/backend/artifacts/
+# Private SpeechShield model artifacts.
+# Only approved V4 inference runtime files are allowed.
+
+/backend/artifacts/*
+!/backend/artifacts/v4/
+
+/backend/artifacts/v4/*
+!/backend/artifacts/v4/checkpoints/
+
+/backend/artifacts/v4/checkpoints/*
+
+!/backend/artifacts/v4/v4_config.json
+!/backend/artifacts/v4/preprocessing_config.json
+!/backend/artifacts/v4/model_def.py
+!/backend/artifacts/v4/v4_artifact_manifest.json
+
+!/backend/artifacts/v4/checkpoints/best_v4.pt
 
 # Private audio uploads (Layer 5)
 /backend/data/audio_uploads/

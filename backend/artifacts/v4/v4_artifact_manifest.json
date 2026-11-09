@@ -1,0 +1,54 @@
+{
+  "project": "SpeechShield",
+  "version": "V4",
+  "checkpoint_sha256": "40c96ffa919a8d9d1e188321ee76f215f93e09241ec444eaed9b627234a8acda",
+  "selected_epoch": 8,
+  "validation_macro_ba": 0.9610455486542442,
+  "threshold": 0.39499999999999996,
+  "files": {
+    "checkpoints/best_v4.pt": {
+      "sha256": "40c96ffa919a8d9d1e188321ee76f215f93e09241ec444eaed9b627234a8acda",
+      "size_bytes": 402421
+    },
+    "checkpoints/v4_latest_resume.pt": {
+      "sha256": "1a8c18c110315e1376ffe149e408e151dd72e39c9beb0c4271d7ed9b0f044111",
+      "size_bytes": 1200735
+    },
+    "v4_config.json": {
+      "sha256": "42534546a0973383ba980203e6819056cd3b153006cf3fab3b4e5887ff5ef19a",
+      "size_bytes": 2626
+    },
+    "training_history.csv": {
+      "sha256": "115fbff3b7a86311b1f906e6afd844b4b917a034b0843553a91296241a03e07b",
+      "size_bytes": 709
+    },
+    "data_preparation.json": {
+      "sha256": "9af4170c80137058cf62e714c4338efdc1cc6d013a912c9615809b4921cdc3bb",
+      "size_bytes": 561
+    },
+    "train_manifest.csv": {
+      "sha256": "63bad934c5c55d6879a3e2a2b4e1111334068c6a4260d18f8f70832b3ad528a7",
+      "size_bytes": 22299851
+    },
+    "validation_manifest_full.csv": {
+      "sha256": "d0a360e999fc80516954f72b6d4afd4e988e0b2dd46b18be249225749d9066de",
+      "size_bytes": 4337718
+    },
+    "validation_paired_manifest.csv": {
+      "sha256": "9452fc62792a504cf089685116d378481aa1012d73ddb7ce9986c904c7e7b16b",
+      "size_bytes": 597063
+    },
+    "test_manifest_reference.csv": {
+      "sha256": "38cbcf38361d5d407ad378aef02a9d027929e7df15987bcafc34ed30fda542af",
+      "size_bytes": 4740386
+    },
+    "preprocessing_config.json": {
+      "sha256": "d4b693f1e963358414801a22b3c540d11c05beec26aa77bf50edb02d12880596",
+      "size_bytes": 405
+    },
+    "model_def.py": {
+      "sha256": "e4d21455a1a445670cad4092931badf341d1f648efebf501e0b092151b169ee2",
+      "size_bytes": 982
+    }
+  }
+}

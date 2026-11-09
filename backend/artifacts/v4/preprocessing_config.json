@@ -1,0 +1,17 @@
+{
+  "target_sample_rate": 16000,
+  "target_length_seconds": 4.0,
+  "crop_policy": "center_crop_or_right_pad",
+  "n_mels": 64,
+  "n_fft": 512,
+  "hop_length": 160,
+  "mel_power": 2.0,
+  "mel_center": true,
+  "mel_pad_mode": "reflect",
+  "mel_norm": null,
+  "mel_scale": "htk",
+  "mel_window": "hann",
+  "log_epsilon": 1e-06,
+  "normalization": "per_recording_mean_std",
+  "normalization_std_floor": 1e-05
+}
