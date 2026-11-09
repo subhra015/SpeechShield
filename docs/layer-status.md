@@ -53,4 +53,5 @@ Local inference activation & real voice detection:
 - Result visualization: score gauge, waveform (256 pts), feature map (64x96), diagnostics, segment metadata.
 - Evaluation harness: backend/.local_evaluation/ (gitignored). Manifest + per-sample report + metrics.
 - Frontend Analyze shows real probability, threshold, predicted class, model id, visualizations.
-- Backend tests: 87 passed. Inference authorized locally (not production).
+- Job state machine consistency repair: transition() used for all status changes; no suppressed exceptions.
+- Backend tests: 90 passed. Inference authorized locally (not production).

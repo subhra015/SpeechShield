@@ -8,10 +8,15 @@ BACKEND = Path(__file__).resolve().parent.parent
 if str(BACKEND) not in sys.path:
     sys.path.insert(0, str(BACKEND))
 
-_test_db_path = Path(tempfile.gettempdir()) / "speechshield_test.db"
-if _test_db_path.exists():
-    _test_db_path.unlink()
-os.environ.setdefault("DATABASE_URL", f"sqlite:///{_test_db_path.as_posix()}")
+# Use a unique SQLite database for every pytest process.
+# This prevents Windows file-lock conflicts and parallel test collisions.
+_test_db_dir = Path(tempfile.mkdtemp(prefix="speechshield_pytest_"))
+_test_db_path = _test_db_dir / "speechshield_test.db"
+
+# Always override the application database URL during tests.
+# Never allow tests to accidentally connect to a developer database.
+os.environ["DATABASE_URL"] = f"sqlite:///{_test_db_path.as_posix()}"
+
 os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-1234567890")
 
 import pytest  # noqa: E402

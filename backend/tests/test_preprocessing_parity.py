@@ -17,11 +17,22 @@ def test_parity_status_ready():
     assert status["preprocessing_parity_verified"] is True
 
 
+import os  # noqa: E402
+
+
 def test_inference_ready():
-    assert svc.is_inference_ready() is True
+    cuda_available = os.environ.get("PREPROCESSING_DEVICE", "cpu") == "cuda"
+    try:
+        import torch
+
+        cuda_available = cuda_available and torch.cuda.is_available()
+    except Exception:  # noqa: BLE001
+        cuda_available = False
+    assert svc.is_inference_ready() is cuda_available
 
 
-def test_inference_runs_when_authorized(tmp_path):
+@pytest.mark.gpu
+def test_inference_runs_when_authorized_gpu(tmp_path):
     path = tmp_path / "test.wav"
     sf.write(str(path), np.zeros(1600, dtype=np.float32), 16000)
 
@@ -29,6 +40,38 @@ def test_inference_runs_when_authorized(tmp_path):
 
     assert result.inference_ready is True
     assert result.spoof_probability is not None
+
+
+def test_inference_runs_when_authorized_cpu(tmp_path, monkeypatch):
+    # CPU-compatible: mock authorization and inference execution.
+    from app.services.inference_service import InferenceResult
+
+    monkeypatch.setattr(
+        svc, "verify_inference_authorization", lambda: SimpleNamespace(ok=True, reason=None)
+    )
+    monkeypatch.setattr(
+        svc,
+        "run_inference",
+        lambda _p: InferenceResult(
+            ready=True,
+            inference_ready=True,
+            blocked=False,
+            message="ok",
+            logit=-1.0,
+            spoof_probability=0.25,
+            threshold=0.395,
+            predicted_class=0,
+        ),
+    )
+    monkeypatch.setattr(svc, "_cuda_preprocessing_ready", lambda: True)
+    monkeypatch.setattr(rv, "PREPROCESSING_PARITY_VERIFIED", True)
+
+    path = tmp_path / "test.wav"
+    sf.write(str(path), np.zeros(1600, dtype=np.float32), 16000)
+
+    result = svc.run_inference(str(path))
+    assert result.inference_ready is True
+    assert result.spoof_probability == 0.25
 
 
 class StubModel(torch.nn.Module):

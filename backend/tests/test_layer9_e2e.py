@@ -5,7 +5,7 @@ from __future__ import annotations
 import io
 
 import numpy as np
-import pytest
+import pytest  # noqa: E402
 import soundfile as sf
 from fastapi.testclient import TestClient
 
@@ -19,7 +19,29 @@ def _register_and_login(client: TestClient, username: str) -> str:
     return r.json()["access_token"]
 
 
-def test_e2e_workflow(client: TestClient):
+def test_e2e_workflow(client: TestClient, monkeypatch):
+    from app.services.inference_service import InferenceResult
+
+    monkeypatch.setattr(
+        "app.routers.inference.verify_inference_authorization",
+        lambda: __import__(
+            "app.services.inference_service", fromlist=["AuthorizationResult"]
+        ).AuthorizationResult(ok=True, reason=None),
+    )
+    monkeypatch.setattr(
+        "app.routers.inference.run_inference",
+        lambda _p: InferenceResult(
+            ready=True,
+            inference_ready=True,
+            blocked=False,
+            message="ok",
+            logit=-1.0,
+            spoof_probability=0.25,
+            threshold=0.395,
+            predicted_class=0,
+        ),
+    )
+
     token = _register_and_login(client, "e2euser")
     # session restore
     r = client.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"})
@@ -118,6 +140,7 @@ def authorized_client(client, monkeypatch, tmp_path):
     yield client, storage
 
 
+@pytest.mark.gpu
 @pytest.mark.parametrize("fixture_name", ["genuine_normal", "synthetic_normal"])
 def test_isolated_real_inference(authorized_client, fixture_name):
     client, storage = authorized_client
@@ -146,6 +169,10 @@ def test_isolated_real_inference(authorized_client, fixture_name):
     assert r.status_code == 200
 
 
+import pytest  # noqa: E402
+
+
+@pytest.mark.gpu
 def test_real_inference_runs(client):
     token = _register_and_login(client, "realinf")
     import io

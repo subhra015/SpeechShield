@@ -20,3 +20,6 @@ indent-style = "space"
 testpaths = ["tests"]
 asyncio_default_fixture_loop_scope = "function"
 addopts = "-q"
+markers = [
+    "gpu: requires an actual CUDA-capable GPU and approved GPU inference environment",
+]
